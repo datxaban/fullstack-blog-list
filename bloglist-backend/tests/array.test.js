@@ -96,7 +96,6 @@ describe('favorite blog', () => {
 
   test('when list has only one blog equals the blog', () => {
     const result = favoriteBlog(listWithOneBlog)
-    console.log("Result",result)
     assert.deepStrictEqual(result, {
         title: "Canonical string reduction",
         author: "Edsger W. Dijkstra",

@@ -21,46 +21,10 @@ blogsRouter.get('/', async(request, response) => {
   }
 })
 
-blogsRouter.post('/', async(request, response, next) => {
-  const body = request.body
-  const token = request.token
-
-  if (!token) {
-    return response.status(401).json({ error: 'token missing' })
-  }
-
-  const decodedToken = jwt.verify(token, process.env.SECRET)
-  if (!decodedToken || !decodedToken.id) {
-    return response.status(401).json({ error: 'token invalid)' })
-  }
-  
-  if(!body.title || !body.url) {
-    return  response.status(400).json({ error: 'title or url missing' })
-  }
-  const user = await User.findById(decodedToken.id)
-  const blog = new Blog({
-    title: body.title,
-    author: body.author,
-    url: body.url,
-    likes: body.likes || 0,
-    user: user
-  })
-
-
-  const savedBlog = await blog.save()
-  user.blogs = user.blogs.concat({
-    title: body.title,
-    url: body.url,
-    author: body.author,
-    id: savedBlog._id
-  })
-  // user.blogs = user.blogs.concat(savedBlog._id)
-  await user.save()
-  response.status(201).json(savedBlog)
-})
-
 blogsRouter.delete('/:id', async(request, response, next) => {
   const token = request.token
+  const user = request.user
+
   if(!token) {
     return response.status(401).json({ error: 'token missing' })
   }
@@ -72,11 +36,12 @@ blogsRouter.delete('/:id', async(request, response, next) => {
   if(!blog) {
     return response.status(404).json({ error: 'blog not found' })
   }
-  if(blog.user.toString() !== decodedToken.id) {
+
+  if(blog.user.toString() !== user.id.toString()) {
     return response.status(401).json({ error: 'unauthorized' })
   }
   
-  const user = await User.findById(decodedToken.id)
+  
   user.blogs = user.blogs.filter(blog => blog.id !== request.params.id)
   await user.save()
 
@@ -102,6 +67,48 @@ blogsRouter.put('/:id', async(request, response, next) => {
   else {
     response.status(404).end()
   }
+})
+
+blogsRouter.post('/', async(request, response, next) => {
+  const body = request.body
+  const token = request.token
+  const user = request.user
+
+  if (!token) {
+    return response.status(401).json({ error: 'token missing' })
+  }
+
+  const decodedToken = jwt.verify(token, process.env.SECRET)
+  if (!decodedToken || !decodedToken.id) {
+    return response.status(401).json({ error: 'token invalid)' })
+  }
+  
+  if(!body.title || !body.url) {
+    return  response.status(400).json({ error: 'title or url missing' })
+  }
+  // const user = await User.findById(decodedToken.id)
+  const blog = new Blog({
+    title: body.title,
+    author: body.author,
+    url: body.url,
+    likes: body.likes || 0,
+    user: user
+  })
+
+
+  const savedBlog = await blog.save()
+  // Need to uncomment this
+  user.blogs = user.blogs.concat({
+    title: body.title,
+    url: body.url,
+    author: body.author,
+    id: savedBlog._id
+  })
+
+
+  // Need to uncomment this
+  await user.save()
+  response.status(201).json(savedBlog)
 })
 
 module.exports = blogsRouter
